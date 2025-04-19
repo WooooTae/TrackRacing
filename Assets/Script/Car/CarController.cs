@@ -33,6 +33,13 @@ public class CarController : MonoBehaviour
 
     public Rigidbody rb;
 
+    //드리프트 관련
+    public TrailRenderer leftSkid;
+    public TrailRenderer rightSkid;
+
+    private bool isDrift;
+    private bool isDrifted;
+
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -43,19 +50,42 @@ public class CarController : MonoBehaviour
         steerInput = Input.GetAxis("Horizontal");
         motorInput = Input.GetAxis("Vertical");
         isBrake = Input.GetKey(KeyCode.Space);
+        isDrift = Input.GetKey(KeyCode.LeftShift);
 
-        UpdateWheelVisual(frontLeftCollider, frontLeftTransform);
-        UpdateWheelVisual(frontRightCollider, frontRightTransform);
-        UpdateWheelVisual(rearLeftCollider, rearLeftTransform);
-        UpdateWheelVisual(rearRightCollider, rearRightTransform);
+    }
+
+    private void LateUpdate()
+    {
+
     }
 
     void FixedUpdate()
     {
+        UpdateWheelVisual(frontLeftCollider, frontLeftTransform);
+        UpdateWheelVisual(frontRightCollider, frontRightTransform);
+        UpdateWheelVisual(rearLeftCollider, rearLeftTransform);
+        UpdateWheelVisual(rearRightCollider, rearRightTransform);
+
         HandleSteer();
         HandleMotor();
         ApplyBrake();
         GearShifting();
+
+        if (isDrift != isDrifted)
+        {
+            if (isDrift)
+            {
+                SetDriftFriction(0.7f); 
+                EnableSkid(true); 
+            }
+            else
+            {
+                SetDriftFriction(1.0f); 
+                EnableSkid(false); 
+            }
+
+            isDrifted = isDrift; 
+        }
     }
 
     private void HandleSteer()
@@ -104,6 +134,38 @@ public class CarController : MonoBehaviour
         collider.GetWorldPose(out pos, out rot);
         wheelTransform.position = pos;
         wheelTransform.rotation = rot;
+    }
+
+    private bool IsDrifting()
+    {
+        return isDrift && Mathf.Abs(steerInput) > 0.3f && GetSpeedKmh() > 20f;
+    }
+
+    private void SetDriftFriction(float stiffness)
+    {
+        WheelFrictionCurve sidewaysFriction;
+
+        sidewaysFriction = rearLeftCollider.sidewaysFriction;
+        sidewaysFriction.stiffness = stiffness;
+        rearLeftCollider.sidewaysFriction = sidewaysFriction;
+
+        sidewaysFriction = rearRightCollider.sidewaysFriction;
+        sidewaysFriction.stiffness = stiffness;
+        rearRightCollider.sidewaysFriction = sidewaysFriction;
+
+        Debug.Log("Dirfting");
+    }
+
+    private void EnableSkid(bool enable)
+    {
+        if (leftSkid != null)
+        {
+            leftSkid.emitting = enable;
+        }
+        if (rightSkid != null)
+        {
+            rightSkid.emitting = enable;
+        }
     }
 
     public int GetCurrentGear() => currentGear + 1;
