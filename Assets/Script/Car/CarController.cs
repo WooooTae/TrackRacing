@@ -119,7 +119,7 @@ public class CarController : MonoBehaviour
 
     private void GearShifting()
     {
-        float averageRpm = (frontLeftCollider.rpm + frontRightCollider.rpm + rearLeftCollider.rpm + rearLeftCollider.rpm) / 4f;
+        float averageRpm = (frontLeftCollider.rpm + frontRightCollider.rpm + rearLeftCollider.rpm + rearRightCollider.rpm) / 4f;
         engineRpm = Mathf.Abs(averageRpm * gearRatios[currentGear]);
 
         if (engineRpm > shiftUpRpm && currentGear < gearRatios.Length - 1)
