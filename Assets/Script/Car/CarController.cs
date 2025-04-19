@@ -40,9 +40,13 @@ public class CarController : MonoBehaviour
     private bool isDrift;
     private bool isDrifted;
 
+    // UI°ü·Ã
+    private SpeedUI speedUI;
+
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
+        speedUI = GetComponentInChildren<SpeedUI>();
     }
 
     void Update()
@@ -52,6 +56,7 @@ public class CarController : MonoBehaviour
         isBrake = Input.GetKey(KeyCode.Space);
         isDrift = Input.GetKey(KeyCode.LeftShift);
 
+        speedUI?.UpdateSpeedUI(GetSpeedKmh());
     }
 
     private void LateUpdate()
