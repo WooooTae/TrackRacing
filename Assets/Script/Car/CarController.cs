@@ -24,12 +24,14 @@ public class CarController : MonoBehaviour
     private bool isBrake;
 
     //자동 변속 관련
-    public float[] gearRatios = { 2.5f, 2.0f, 1.5f, 1.0f, 0.75f };
+    public float[] gearRatios = { 3.0f, 2.2f, 1.6f, 1.1f, 0.8f };
     private int currentGear = 0;
 
-    public float shiftUpRpm = 4000f;
+    public float shiftUpRpm = 5000f;
     public float shiftDownRpm = 1500f;
     public float engineRpm;
+    private float shiftDelay = 1.0f;
+    private float lastShiftTime;
 
     public Rigidbody rb;
 
@@ -43,10 +45,19 @@ public class CarController : MonoBehaviour
     // UI관련
     private SpeedUI speedUI;
 
+    //부스터 관련
+    public ParticleSystem boostEffect;
+    public float boostDuration = 2f;
+    private float boostTimer;
+
+    private bool isBoost;
+
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
         speedUI = GetComponentInChildren<SpeedUI>();
+
+        isBoost = false;
     }
 
     void Update()
@@ -55,6 +66,11 @@ public class CarController : MonoBehaviour
         motorInput = Input.GetAxis("Vertical");
         isBrake = Input.GetKey(KeyCode.Space);
         isDrift = Input.GetKey(KeyCode.LeftShift);
+
+        if (Input.GetKeyDown(KeyCode.LeftControl))
+        {
+            StartCoroutine(BoostCoroutine());
+        }
 
         speedUI?.UpdateSpeedUI(GetSpeedKmh());
     }
@@ -80,16 +96,16 @@ public class CarController : MonoBehaviour
         {
             if (isDrift)
             {
-                SetDriftFriction(0.7f); 
-                EnableSkid(true); 
+                SetDriftFriction(0.7f);
+                EnableSkid(true);
             }
             else
             {
-                SetDriftFriction(1.0f); 
-                EnableSkid(false); 
+                SetDriftFriction(1.0f);
+                EnableSkid(false);
             }
 
-            isDrifted = isDrift; 
+            isDrifted = isDrift;
         }
     }
 
@@ -117,18 +133,63 @@ public class CarController : MonoBehaviour
         rearRightCollider.brakeTorque = currentBrakeForce;
     }
 
+    private IEnumerator BoostCoroutine()
+    {
+        if (isBoost) yield break;
+        Debug.Log("Boost");
+
+        isBoost = true;
+
+        float originalForce = motorForce;
+
+        if (boostEffect != null)
+        {
+            boostEffect.Play();
+        }
+
+        float boostEndTime = Time.time + boostDuration;
+        while (Time.time < boostEndTime)
+        {
+            float speedIncrease = 20f * Time.deltaTime;  
+
+            // 150km/h를 초과하지 않도록 제한
+            if (rb.velocity.magnitude < 41.6f) 
+            {
+                rb.velocity = rb.velocity + transform.forward * speedIncrease; 
+            }
+
+
+            yield return null;
+        }
+
+        motorForce = originalForce;
+        isBoost = false;
+
+        if (boostEffect != null)
+        {
+            boostEffect.Stop();
+        }
+    }
+
     private void GearShifting()
     {
+        if (isBoost) return;
+
         float averageRpm = (frontLeftCollider.rpm + frontRightCollider.rpm + rearLeftCollider.rpm + rearRightCollider.rpm) / 4f;
         engineRpm = Mathf.Abs(averageRpm * gearRatios[currentGear]);
+
+        if (Time.time - lastShiftTime < shiftDelay)
+            return;
 
         if (engineRpm > shiftUpRpm && currentGear < gearRatios.Length - 1)
         {
             currentGear++;
+            lastShiftTime = Time.time;
         }
         else if (engineRpm < shiftDownRpm && currentGear > 0)
         {
             currentGear--;
+            lastShiftTime = Time.time;
         }
     }
 
@@ -157,8 +218,6 @@ public class CarController : MonoBehaviour
         sidewaysFriction = rearRightCollider.sidewaysFriction;
         sidewaysFriction.stiffness = stiffness;
         rearRightCollider.sidewaysFriction = sidewaysFriction;
-
-        Debug.Log("Dirfting");
     }
 
     private void EnableSkid(bool enable)
