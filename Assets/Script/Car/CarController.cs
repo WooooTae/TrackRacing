@@ -2,237 +2,255 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum GearState
+{
+    Neutral,
+    Drive,
+    CheckingChange,
+    Changing
+};
+
 public class CarController : MonoBehaviour
 {
+    //rpm(엔진 회전수),torque(페달 밟는 힘),horsepower(빠르게 달리는 힘)
+
+    public Rigidbody rb;
+
     public WheelCollider frontLeftCollider;
     public WheelCollider frontRightCollider;
     public WheelCollider rearLeftCollider;
     public WheelCollider rearRightCollider;
 
-    public Transform frontLeftTransform;
-    public Transform frontRightTransform;
-    public Transform rearLeftTransform;
-    public Transform rearRightTransform;
+    public MeshRenderer frontLeftMesh;
+    public MeshRenderer frontRightMesh;
+    public MeshRenderer rearLeftMesh;
+    public MeshRenderer rearRightMesh;
 
-    public float motorForce = 1500f;
-    public float maxSteerAngle = 30f;
-    public float brakeForce = 3000f;
+    public float motorPower;
+    public float brakePower;
+    public float slipAngle;
+    public float speed;
+    public float maxSpeed;
+    public float RPM;
+    public float redLine;
+    public float idleRPM;
+    public float[] gearRatios;
+    public float differntialRatio;
+    public float increaseGearRPM;
+    public float decreaseGearRPM;
+    public float ChangeGearTime = 0.5f;
 
-    private float steerInput;
-    private float motorInput;
-    private float currentBrakeForce;
-    private bool isBrake;
+    private bool isbrake = false;
 
-    //자동 변속 관련
-    public float[] gearRatios = { 3.0f, 2.2f, 1.6f, 1.1f, 0.8f };
-    private int currentGear = 0;
+    public int currentGear;
+    public int isEngineRunning;
 
-    public float shiftUpRpm = 5000f;
-    public float shiftDownRpm = 1500f;
-    public float engineRpm;
-    private float shiftDelay = 1.0f;
-    private float lastShiftTime;
+    public AnimationCurve steeringCurve;
+    public AnimationCurve hpToRPMCurve; // rpm에 따른 마력 계산
 
-    public Rigidbody rb;
+    private float engineInput;
+    private float brakeInput;
+    private float steeringInput;
+    private float currentTorque;
+    private float clutch;
+    private float wheelRPM;
+    private float speedClamped;
 
-    //드리프트 관련
-    public TrailRenderer leftSkid;
-    public TrailRenderer rightSkid;
-
-    private bool isDrift;
-    private bool isDrifted;
-
-    // UI관련
-    private SpeedUI speedUI;
-
-    //부스터 관련
-    public ParticleSystem boostEffect;
-    public float boostDuration = 2f;
-    private float boostTimer;
-
-    private bool isBoost;
+    private GearState gearState;
 
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
-        speedUI = GetComponentInChildren<SpeedUI>();
 
-        isBoost = false;
+        Application.targetFrameRate = 60;
+        rb.centerOfMass = new Vector3(0, -0.5f, 0);
     }
 
     void Update()
     {
-        steerInput = Input.GetAxis("Horizontal");
-        motorInput = Input.GetAxis("Vertical");
-        isBrake = Input.GetKey(KeyCode.Space);
-        isDrift = Input.GetKey(KeyCode.LeftShift);
+        speed = rearRightCollider.rpm * rearRightCollider.radius * 2f * Mathf.PI / 10f;
+        speedClamped = Mathf.Lerp(speedClamped, speed, Time.deltaTime);
 
-        if (Input.GetKeyDown(KeyCode.LeftControl))
-        {
-            StartCoroutine(BoostCoroutine());
-        }
-
-        speedUI?.UpdateSpeedUI(GetSpeedKmh());
-    }
-
-    private void LateUpdate()
-    {
-
-    }
-
-    void FixedUpdate()
-    {
-        UpdateWheelVisual(frontLeftCollider, frontLeftTransform);
-        UpdateWheelVisual(frontRightCollider, frontRightTransform);
-        UpdateWheelVisual(rearLeftCollider, rearLeftTransform);
-        UpdateWheelVisual(rearRightCollider, rearRightTransform);
-
-        HandleSteer();
-        HandleMotor();
+        CheckInput();
+        ApplyMotor();
+        ApplySteering();
         ApplyBrake();
-        GearShifting();
+        ApplyWheelPosition();
+    }
 
-        if (isDrift != isDrifted)
+    void CheckInput()
+    {
+        engineInput = Input.GetAxis("Vertical");
+        steeringInput = Input.GetAxis("Horizontal");
+        slipAngle = Vector3.Angle(transform.forward, rb.velocity - transform.forward);
+        //slipAngle = Vector3.Angle(transform.forward, rb.velocity.normalized);
+
+        float movingDirection = Vector3.Dot(transform.forward, rb.velocity);
+
+        if (gearState != GearState.Changing)
         {
-            if (isDrift)
+            if (gearState == GearState.Neutral)
             {
-                SetDriftFriction(0.7f);
-                EnableSkid(true);
+                clutch = 0;
+                if (Mathf.Abs(engineInput) > 0f)
+                {
+                    StartCoroutine(StartEngine());
+                    gearState = GearState.Drive;
+                }
             }
             else
             {
-                SetDriftFriction(1.0f);
-                EnableSkid(false);
+                clutch = Input.GetKey(KeyCode.LeftShift) ? 0f : Mathf.MoveTowards(clutch, 1f, Time.deltaTime * 5f);
             }
+        }
+        else
+        {
+            clutch = 0;
+        }
 
-            isDrifted = isDrift;
+        if (movingDirection < -0.5f && engineInput > 0f)
+        {
+            brakeInput = Mathf.Abs(engineInput);
+        }
+        else if (movingDirection > 0.5f && engineInput < 0f)
+        {
+            brakeInput = Mathf.Abs(engineInput);
+        }
+        else
+        {
+            brakeInput = 0;
+        }
+
+        isbrake = Input.GetKey(KeyCode.Space);
+    }
+
+    void ApplyBrake()
+    {
+        frontRightCollider.brakeTorque = brakeInput * brakePower * 0.7f;
+        frontLeftCollider.brakeTorque = brakeInput * brakePower * 0.7f;
+
+        rearRightCollider.brakeTorque = brakeInput * brakePower * 0.3f;
+        rearLeftCollider.brakeTorque = brakeInput * brakePower * 0.3f;
+
+        if (isbrake)
+        {
+            clutch = 0;
+            rearRightCollider.brakeTorque = brakeInput * brakePower * 1000f;
+            rearLeftCollider.brakeTorque = brakeInput * brakePower * 1000f;
         }
     }
 
-    private void HandleSteer()
+    void ApplyMotor()
     {
-        frontLeftCollider.steerAngle = maxSteerAngle * steerInput;
-        frontRightCollider.steerAngle = maxSteerAngle * steerInput;
+        currentTorque = CalculateTorque();
+        rearRightCollider.motorTorque = currentTorque * engineInput;
+        rearLeftCollider.motorTorque = currentTorque * engineInput;
     }
 
-    private void HandleMotor()
+    void ApplySteering()
     {
-        frontLeftCollider.motorTorque = motorForce * motorInput;
-        frontRightCollider.motorTorque = motorForce * motorInput;
-        rearLeftCollider.motorTorque = motorForce * motorInput;
-        rearRightCollider.motorTorque = motorForce * motorInput;
-    }
-
-    private void ApplyBrake()
-    {
-        currentBrakeForce = isBrake ? brakeForce : 0f;
-
-        frontLeftCollider.brakeTorque = currentBrakeForce;
-        frontRightCollider.brakeTorque = currentBrakeForce;
-        rearLeftCollider.brakeTorque = currentBrakeForce;
-        rearRightCollider.brakeTorque = currentBrakeForce;
-    }
-
-    private IEnumerator BoostCoroutine()
-    {
-        if (isBoost) yield break;
-        Debug.Log("Boost");
-
-        isBoost = true;
-
-        float originalForce = motorForce;
-
-        if (boostEffect != null)
+        float steeringAngle = steeringInput * steeringCurve.Evaluate(speed);
+        if (slipAngle < 120f)
         {
-            boostEffect.Play();
+            steeringAngle += Vector3.SignedAngle(transform.forward, rb.velocity + transform.forward, Vector3.up);
         }
 
-        float boostEndTime = Time.time + boostDuration;
-        while (Time.time < boostEndTime)
-        {
-            float speedIncrease = 20f * Time.deltaTime;  
+        steeringAngle = Mathf.Clamp(steeringAngle, -90f, 90f);
+        frontRightCollider.steerAngle = steeringAngle;
+        frontLeftCollider.steerAngle = steeringAngle;
+    }
 
-            // 150km/h를 초과하지 않도록 제한
-            if (rb.velocity.magnitude < 41.6f) 
+    void ApplyWheelPosition()
+    {
+        UpdateWheel(frontRightCollider, frontRightMesh);
+        UpdateWheel(frontLeftCollider, frontLeftMesh);
+        UpdateWheel(rearRightCollider, rearRightMesh);
+        UpdateWheel(rearLeftCollider, rearLeftMesh);
+    }
+
+    void UpdateWheel(WheelCollider col,MeshRenderer wheelMesh)
+    {
+        Quaternion quat;
+        Vector3 position;
+        col.GetWorldPose(out position, out quat);
+        wheelMesh.transform.position = position;
+        wheelMesh.transform.rotation = quat;
+    }
+
+    float CalculateTorque()
+    {
+        float torque = 0f;
+
+        if (RPM < idleRPM + 200 && engineInput == 0 && currentGear == 0)
+        {
+            gearState = GearState.Neutral;
+        }
+
+        if (gearState == GearState.Drive && clutch > 0)
+        {
+            if (RPM > increaseGearRPM)
             {
-                rb.velocity = rb.velocity + transform.forward * speedIncrease; 
+                StartCoroutine(ChangeGear(1));
             }
-
-
-            yield return null;
+            else if (RPM < decreaseGearRPM)
+            {
+                StartCoroutine(ChangeGear(-1));
+            }
         }
 
-        motorForce = originalForce;
-        isBoost = false;
-
-        if (boostEffect != null)
+        if (isEngineRunning > 0)
         {
-            boostEffect.Stop();
+            if (clutch < 0.1f)
+            {
+                RPM = Mathf.Lerp(RPM, Mathf.Max(idleRPM, redLine * engineInput) + Random.Range(-50,50), Time.deltaTime);
+            }
+            else
+            {
+                //마력(Hp) = (torque * rpm) / 5252(단위 변환 때문에 나눔) ,마력 = 힘 * 속도
+                wheelRPM = Mathf.Abs((rearRightCollider.rpm + rearLeftCollider.rpm) / 2f) * gearRatios[currentGear] * differntialRatio;
+                RPM = Mathf.Lerp(RPM, Mathf.Max(idleRPM - 100, wheelRPM), Time.deltaTime * 3f);
+                torque = (motorPower / RPM) * (hpToRPMCurve.Evaluate(RPM / redLine)) * gearRatios[currentGear] * differntialRatio * clutch * 5252f;
+            }
         }
+        return torque;
     }
 
-    private void GearShifting()
+    IEnumerator StartEngine()
     {
-        if (isBoost) return;
+        isEngineRunning = 1;
+        yield return new WaitForSeconds(0.6f);
+        isEngineRunning = 2;
+        yield return new WaitForSeconds(0.4f);
+    }
 
-        float averageRpm = (frontLeftCollider.rpm + frontRightCollider.rpm + rearLeftCollider.rpm + rearRightCollider.rpm) / 4f;
-        engineRpm = Mathf.Abs(averageRpm * gearRatios[currentGear]);
-
-        if (Time.time - lastShiftTime < shiftDelay)
-            return;
-
-        if (engineRpm > shiftUpRpm && currentGear < gearRatios.Length - 1)
+    IEnumerator ChangeGear(int addgear)
+    {
+        gearState = GearState.CheckingChange;
+        if (currentGear + addgear >= 0)
         {
-            currentGear++;
-            lastShiftTime = Time.time;
+            if (addgear > 0)
+            {
+                yield return new WaitForSeconds(0.7f);
+                if (RPM < increaseGearRPM || currentGear >= gearRatios.Length - 1)
+                {
+                    gearState = GearState.Drive;
+                    yield break;
+                }
+            }
+            gearState = GearState.Changing;
+            yield return new WaitForSeconds(ChangeGearTime);
+            currentGear += addgear;
         }
-        else if (engineRpm < shiftDownRpm && currentGear > 0)
+      
+        if (gearState != GearState.Neutral)
         {
-            currentGear--;
-            lastShiftTime = Time.time;
+            gearState = GearState.Drive;
         }
     }
 
-    private void UpdateWheelVisual(WheelCollider collider, Transform wheelTransform)
+    public float GetSpeedRatio()
     {
-        Vector3 pos;
-        Quaternion rot;
-        collider.GetWorldPose(out pos, out rot);
-        wheelTransform.position = pos;
-        wheelTransform.rotation = rot;
+        return RPM * engineInput / redLine;
     }
-
-    private bool IsDrifting()
-    {
-        return isDrift && Mathf.Abs(steerInput) > 0.3f && GetSpeedKmh() > 20f;
-    }
-
-    private void SetDriftFriction(float stiffness)
-    {
-        WheelFrictionCurve sidewaysFriction;
-
-        sidewaysFriction = rearLeftCollider.sidewaysFriction;
-        sidewaysFriction.stiffness = stiffness;
-        rearLeftCollider.sidewaysFriction = sidewaysFriction;
-
-        sidewaysFriction = rearRightCollider.sidewaysFriction;
-        sidewaysFriction.stiffness = stiffness;
-        rearRightCollider.sidewaysFriction = sidewaysFriction;
-    }
-
-    private void EnableSkid(bool enable)
-    {
-        if (leftSkid != null)
-        {
-            leftSkid.emitting = enable;
-        }
-        if (rightSkid != null)
-        {
-            rightSkid.emitting = enable;
-        }
-    }
-
-    public int GetCurrentGear() => currentGear + 1;
-    public float GetEngineRPM() => engineRpm;
-    public float GetSpeedKmh() => rb.velocity.magnitude * 3.6f;
 }
+
