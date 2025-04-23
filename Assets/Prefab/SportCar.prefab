@@ -760,6 +760,7 @@ MonoBehaviour:
   increaseGearRPM: 5500
   decreaseGearRPM: 3300
   ChangeGearTime: 0.5
+  speedMeter: {fileID: 0}
   currentGear: 0
   isEngineRunning: 0
   steeringCurve:
@@ -1468,10 +1469,54 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 1084027289859073575}
     m_Modifications:
+    - target: {fileID: 610426877984573528, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.9961947
+      objectReference: {fileID: 0}
+    - target: {fileID: 610426877984573528, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 610426877984573528, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 610426877984573528, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0.08715578
+      objectReference: {fileID: 0}
+    - target: {fileID: 610426877984573528, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 2033991720951467876, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
       propertyPath: m_Name
       value: SpeedUI
       objectReference: {fileID: 0}
+    - target: {fileID: 3013803541284801908, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
+      propertyPath: arrow
+      value: 
+      objectReference: {fileID: 5239764109340111994}
+    - target: {fileID: 3013803541284801908, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
+      propertyPath: target
+      value: 
+      objectReference: {fileID: 2413003560943408296}
+    - target: {fileID: 3013803541284801908, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
+      propertyPath: maxAngle
+      value: -190
+      objectReference: {fileID: 0}
+    - target: {fileID: 3013803541284801908, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
+      propertyPath: maxSpeed
+      value: 260
+      objectReference: {fileID: 0}
+    - target: {fileID: 3013803541284801908, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
+      propertyPath: minAngle
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3013803541284801908, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
+      propertyPath: SpeedText
+      value: 
+      objectReference: {fileID: 3942362954249505985}
     - target: {fileID: 5811997440328664156, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
       propertyPath: m_Pivot.x
       value: 0
@@ -1561,5 +1606,21 @@ PrefabInstance:
 --- !u!224 &1182073200961714302 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 5811997440328664156, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
+  m_PrefabInstance: {fileID: 4670177497819773986}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3942362954249505985 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8537095949781201123, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
+  m_PrefabInstance: {fileID: 4670177497819773986}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!224 &5239764109340111994 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 610426877984573528, guid: bbc4a5dc425639e4eab70d00552b7136, type: 3}
   m_PrefabInstance: {fileID: 4670177497819773986}
   m_PrefabAsset: {fileID: 0}

@@ -40,6 +40,8 @@ public class CarController : MonoBehaviour
     public float decreaseGearRPM;
     public float ChangeGearTime = 0.5f;
 
+    public SpeedUI speedMeter;
+
     private bool isbrake = false;
 
     public int currentGear;
@@ -82,8 +84,8 @@ public class CarController : MonoBehaviour
     {
         engineInput = Input.GetAxis("Vertical");
         steeringInput = Input.GetAxis("Horizontal");
-        slipAngle = Vector3.Angle(transform.forward, rb.velocity - transform.forward);
-        //slipAngle = Vector3.Angle(transform.forward, rb.velocity.normalized);
+        //slipAngle = Vector3.Angle(transform.forward, rb.velocity - transform.forward);
+        slipAngle = Vector3.Angle(transform.forward, rb.velocity.normalized);
 
         float movingDirection = Vector3.Dot(transform.forward, rb.velocity);
 
@@ -108,20 +110,22 @@ public class CarController : MonoBehaviour
             clutch = 0;
         }
 
-        if (movingDirection < -0.5f && engineInput > 0f)
-        {
-            brakeInput = Mathf.Abs(engineInput);
-        }
-        else if (movingDirection > 0.5f && engineInput < 0f)
-        {
-            brakeInput = Mathf.Abs(engineInput);
-        }
-        else
-        {
-            brakeInput = 0;
-        }
+        //if (movingDirection < -0.5f && engineInput > 0f)
+        //{
+        //    brakeInput = Mathf.Abs(engineInput);
+        //}
+        //else if (movingDirection > 0.5f && engineInput < 0f)
+        //{
+        //    brakeInput = Mathf.Abs(engineInput);
+        //}
+        //else
+        //{
+        //    brakeInput = 0;
+        //}
 
         isbrake = Input.GetKey(KeyCode.Space);
+
+        brakeInput = isbrake ? 1 : 0;
     }
 
     void ApplyBrake()

@@ -353,6 +353,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 4076059183109676825, guid: 7114444204b034c4ea4dfdb14c43ca91, type: 3}
+      propertyPath: motorPower
+      value: 200
+      objectReference: {fileID: 0}
     - target: {fileID: 4316587783007685690, guid: 7114444204b034c4ea4dfdb14c43ca91, type: 3}
       propertyPath: m_SidewaysFriction.m_Stiffness
       value: 0.8
@@ -504,7 +508,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1329582879734340291, guid: 5f585fb12d925de41ad4c18b8f8d19d2, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: 90.66
       objectReference: {fileID: 0}
     - target: {fileID: 1329582879734340291, guid: 5f585fb12d925de41ad4c18b8f8d19d2, type: 3}
       propertyPath: m_LocalPosition.y
