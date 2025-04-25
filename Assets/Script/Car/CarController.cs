@@ -26,6 +26,11 @@ public class CarController : MonoBehaviour
     public MeshRenderer rearLeftMesh;
     public MeshRenderer rearRightMesh;
 
+    public TrailRenderer rearLeftTrail;
+    public TrailRenderer rearRightTrail;
+
+    public GameObject tireTrail;
+
     public float motorPower;
     public float brakePower;
     public float slipAngle;
@@ -42,6 +47,7 @@ public class CarController : MonoBehaviour
     public SettingManager settingManager;
 
     private bool isbrake = false;
+    private bool isDrift = false;
 
     public int currentGear;
     public int isEngineRunning;
@@ -67,6 +73,8 @@ public class CarController : MonoBehaviour
 
         Application.targetFrameRate = 60;
         rb.centerOfMass = new Vector3(0, -0.5f, 0);
+
+        InitiateTrails();
     }
 
     void Update()
@@ -76,10 +84,20 @@ public class CarController : MonoBehaviour
 
         SettingOpen();
         CheckInput();
+        CheckTrails();
         ApplyMotor();
         ApplySteering();
         ApplyBrake();
         ApplyWheelPosition();
+    }
+
+    void InitiateTrails()
+    {
+        if (tireTrail)
+        {
+            rearLeftTrail = Instantiate(tireTrail, rearLeftCollider.transform.position - Vector3.up * rearLeftCollider.radius, Quaternion.identity, rearLeftCollider.transform).GetComponent<TrailRenderer>();
+            rearRightTrail = Instantiate(tireTrail, rearRightCollider.transform.position - Vector3.up * rearRightCollider.radius, Quaternion.identity, rearRightCollider.transform).GetComponent<TrailRenderer>();
+        }
     }
 
     void SettingOpen()
@@ -98,6 +116,8 @@ public class CarController : MonoBehaviour
         steeringInput = Input.GetAxis("Horizontal");
         slipAngle = Vector3.Angle(transform.forward, rb.velocity.normalized);
 
+        isDrift = Input.GetKey(KeyCode.LeftShift);
+
         float movingDirection = Vector3.Dot(transform.forward, rb.velocity);
 
         if (gearState != GearState.Changing)
@@ -113,7 +133,7 @@ public class CarController : MonoBehaviour
             }
             else
             {
-                clutch = Input.GetKey(KeyCode.LeftShift) ? 0f : Mathf.MoveTowards(clutch, 1f, Time.deltaTime * 5f);
+                clutch = isDrift ? 0f : Mathf.MoveTowards(clutch, 1f, Time.deltaTime * 5f);
             }
         }
         else
@@ -124,6 +144,27 @@ public class CarController : MonoBehaviour
         isbrake = Input.GetKey(KeyCode.Space);
 
         brakeInput = isbrake ? 1 : 0;
+    }
+
+    void CheckTrails()
+    {
+        if (isDrift)
+        {
+            rearLeftTrail.emitting = true;
+        }
+        else
+        {
+            rearLeftTrail.emitting = false;
+        }
+
+        if (isDrift)
+        {
+            rearRightTrail.emitting = true;
+        }
+        else
+        {
+            rearRightTrail.emitting = false;
+        }
     }
 
     void ApplyBrake()

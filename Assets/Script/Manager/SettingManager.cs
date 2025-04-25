@@ -24,6 +24,8 @@ public class SettingManager : MonoBehaviour
         filePath = Application.persistentDataPath + "/carSettings.json";
         saveBtn.onClick.AddListener(SaveSettings);
         closeBtn.onClick.AddListener(() => { gameObject.SetActive(false); Time.timeScale = 1.0f; });
+
+        LoadSettings();
     }
 
     void SaveSettings()
@@ -59,6 +61,12 @@ public class SettingManager : MonoBehaviour
             carController.brakePower = carSettings.brakePower;
             carController.idleRPM = carSettings.idleRPM;
             carController.redLine = carSettings.redLine;
+
+            gearChangeTimeInput.text = carSettings.gearChangeTime.ToString();
+            motorPowerInput.text = carSettings.motorPower.ToString();
+            brakePowerInput.text = carSettings.brakePower.ToString();
+            idleRPMInput.text = carSettings.idleRPM.ToString();
+            redLineInput.text = carSettings.redLine.ToString();
         }
     }
 }

@@ -742,6 +742,11 @@ MonoBehaviour:
   frontRightMesh: {fileID: 8192886921508594808}
   rearLeftMesh: {fileID: 1762761651524088913}
   rearRightMesh: {fileID: 1110102715996518032}
+  frontLeftTrail: {fileID: 0}
+  frontRightTrail: {fileID: 0}
+  rearLeftTrail: {fileID: 0}
+  rearRightTrail: {fileID: 0}
+  tireTrail: {fileID: 544749466699133553, guid: 379d519aa37abf342a172a7aa296719f, type: 3}
   motorPower: 100
   brakePower: 50000
   slipAngle: 0
