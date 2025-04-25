@@ -36,11 +36,10 @@ public class CarController : MonoBehaviour
     public float idleRPM;
     public float[] gearRatios;
     public float differntialRatio;
-    public float increaseGearRPM;
-    public float decreaseGearRPM;
     public float ChangeGearTime = 0.5f;
 
     public SpeedUI speedMeter;
+    public SettingManager settingManager;
 
     private bool isbrake = false;
 
@@ -57,6 +56,8 @@ public class CarController : MonoBehaviour
     private float clutch;
     private float wheelRPM;
     private float speedClamped;
+    private float downRPM;
+    private float upRPM;
 
     private GearState gearState;
 
@@ -70,9 +71,10 @@ public class CarController : MonoBehaviour
 
     void Update()
     {
-        speed = rearRightCollider.rpm * rearRightCollider.radius * 2f * Mathf.PI / 10f;
+        speed = rb.velocity.magnitude * 3.6f;
         speedClamped = Mathf.Lerp(speedClamped, speed, Time.deltaTime);
 
+        SettingOpen();
         CheckInput();
         ApplyMotor();
         ApplySteering();
@@ -80,11 +82,20 @@ public class CarController : MonoBehaviour
         ApplyWheelPosition();
     }
 
+    void SettingOpen()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            bool isActive = settingManager.gameObject.activeSelf;
+            settingManager.gameObject.SetActive(!isActive);
+            Time.timeScale = isActive ? 1f : 0f;
+        }
+    }
+
     void CheckInput()
     {
         engineInput = Input.GetAxis("Vertical");
         steeringInput = Input.GetAxis("Horizontal");
-        //slipAngle = Vector3.Angle(transform.forward, rb.velocity - transform.forward);
         slipAngle = Vector3.Angle(transform.forward, rb.velocity.normalized);
 
         float movingDirection = Vector3.Dot(transform.forward, rb.velocity);
@@ -109,19 +120,6 @@ public class CarController : MonoBehaviour
         {
             clutch = 0;
         }
-
-        //if (movingDirection < -0.5f && engineInput > 0f)
-        //{
-        //    brakeInput = Mathf.Abs(engineInput);
-        //}
-        //else if (movingDirection > 0.5f && engineInput < 0f)
-        //{
-        //    brakeInput = Mathf.Abs(engineInput);
-        //}
-        //else
-        //{
-        //    brakeInput = 0;
-        //}
 
         isbrake = Input.GetKey(KeyCode.Space);
 
@@ -190,13 +188,16 @@ public class CarController : MonoBehaviour
             gearState = GearState.Neutral;
         }
 
+        downRPM = redLine * 0.25f * (1f - currentGear / (float)(gearRatios.Length - 1));
+        upRPM = redLine * (0.5f + 0.4f * (currentGear / (float)(gearRatios.Length - 1)));
+
         if (gearState == GearState.Drive && clutch > 0)
         {
-            if (RPM > increaseGearRPM)
+            if (RPM > upRPM)
             {
                 StartCoroutine(ChangeGear(1));
             }
-            else if (RPM < decreaseGearRPM)
+            else if (RPM < downRPM)
             {
                 StartCoroutine(ChangeGear(-1));
             }
@@ -235,12 +236,22 @@ public class CarController : MonoBehaviour
             if (addgear > 0)
             {
                 yield return new WaitForSeconds(0.7f);
-                if (RPM < increaseGearRPM || currentGear >= gearRatios.Length - 1)
+                if (RPM < upRPM || currentGear >= gearRatios.Length - 1)
                 {
                     gearState = GearState.Drive;
                     yield break;
                 }
             }
+            else if (addgear < 0)
+            {
+                yield return new WaitForSeconds(0.7f);
+                if (RPM > downRPM || currentGear <= 0)
+                {
+                    gearState = GearState.Drive;
+                    yield break;
+                }
+            }
+
             gearState = GearState.Changing;
             yield return new WaitForSeconds(ChangeGearTime);
             currentGear += addgear;
