@@ -85,16 +85,20 @@ public class CarController : MonoBehaviour
         SettingOpen();
         CheckInput();
         CheckTrails();
+        ApplyWheelPosition();
+
+        //if (RPM < idleRPM + 200 && engineInput == 0 && currentGear != 0)
+        //{
+        //    currentGear = 0;
+        //    gearState = GearState.Neutral;
+        //}
+    }
+
+    private void FixedUpdate()
+    {
         ApplyMotor();
         ApplySteering();
         ApplyBrake();
-        ApplyWheelPosition();
-
-        if (RPM < idleRPM + 200 && engineInput == 0 && currentGear != 0)
-        {
-            currentGear = 0;
-            gearState = GearState.Neutral;  
-        }
     }
 
     void InitiateTrails()
@@ -235,10 +239,14 @@ public class CarController : MonoBehaviour
             gearState = GearState.Neutral;
         }
 
-        downRPM = redLine * 0.25f * (1f - currentGear / (float)(gearRatios.Length - 1));
-        upRPM = redLine * (0.5f + 0.4f * (currentGear / (float)(gearRatios.Length - 1)));
+        float gearFactor = currentGear / (float)(gearRatios.Length - 1);
 
-        if (gearState == GearState.Drive && clutch > 0)
+        downRPM = Mathf.Lerp(redLine * 0.45f, redLine * 0.65f, gearFactor);
+        downRPM = Mathf.Max(downRPM, idleRPM * 1.2f);
+
+        upRPM = Mathf.Lerp(redLine * 0.6f, redLine * 0.9f, gearFactor);
+
+        if (gearState == GearState.Drive)
         {
             if (RPM > upRPM)
             {
