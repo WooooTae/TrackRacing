@@ -89,6 +89,12 @@ public class CarController : MonoBehaviour
         ApplySteering();
         ApplyBrake();
         ApplyWheelPosition();
+
+        if (RPM < idleRPM + 200 && engineInput == 0 && currentGear != 0)
+        {
+            currentGear = 0;
+            gearState = GearState.Neutral;  
+        }
     }
 
     void InitiateTrails()
